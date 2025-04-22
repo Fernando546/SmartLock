@@ -1,74 +1,126 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import { Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
-export default function HomeScreen() {
+export default function IndexScreen() {
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  
+  const handleUnlock = () => {
+    setIsUnlocking(true);
+    // Simulate unlock process
+    setTimeout(() => {
+      setIsUnlocking(false);
+    }, 2000);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
+    <ThemedView style={styles.container}>
+      {/* Welcome section */}
+      <ThemedView style={styles.welcomeSection}>
+        <ThemedText type="title" style={styles.title}>Smart Lock</ThemedText>
+        <ThemedText style={styles.subtitle}>Welcome back!</ThemedText>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
+
+      {/* Main unlock button */}
+      <ThemedView style={styles.unlockSection}>
+        <TouchableOpacity 
+          style={[styles.unlockButton, isUnlocking && styles.unlockButtonActive]} 
+          onPress={handleUnlock}
+          disabled={isUnlocking}>
+          <Ionicons 
+            name={isUnlocking ? "lock-open" : "lock-closed"} 
+            size={48} 
+            color="white" />
+          <ThemedText style={styles.unlockButtonText}>
+            {isUnlocking ? "Opening..." : "Unlock"}
+          </ThemedText>
+        </TouchableOpacity>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
+
+      {/* Quick action shortcuts */}
+      <ThemedView style={styles.quickActions}>
+        <TouchableOpacity style={styles.actionButton}>
+          <Ionicons name="person" size={24} color="#A1CEDC" />
+          <ThemedText style={styles.actionText}>Profile</ThemedText>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.actionButton}>
+          <Ionicons name="time" size={24} color="#A1CEDC" />
+          <ThemedText style={styles.actionText}>History</ThemedText>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={styles.actionButton}>
+          <Ionicons name="settings" size={24} color="#A1CEDC" />
+          <ThemedText style={styles.actionText}>Settings</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  welcomeSection: {
     alignItems: 'center',
-    gap: 8,
+    marginTop: 40,
+    marginBottom: 30,
   },
-  stepContainer: {
-    gap: 8,
+  title: {
     marginBottom: 8,
+    textAlign: 'center',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  subtitle: {
+    opacity: 0.7,
+    textAlign: 'center',
   },
+  unlockSection: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  unlockButton: {
+    backgroundColor: '#1D3D47',
+    borderRadius: 75,
+    height: 150,
+    width: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  unlockButtonActive: {
+    backgroundColor: '#4CAF50',
+  },
+  unlockButtonText: {
+    color: 'white',
+    marginTop: 8,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 40,
+  },
+  actionButton: {
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#1D3D47',
+    borderRadius: 10,
+    width: '30%',
+  },
+  actionText: {
+    marginTop: 8,
+    fontSize: 12,
+    textAlign: 'center',
+  }
 });

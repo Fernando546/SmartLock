@@ -1,0 +1,2 @@
+// This is a placeholder file to ensure the images directory exists
+// Place your default-avatar.png image here or modify the profile screen to use another image
