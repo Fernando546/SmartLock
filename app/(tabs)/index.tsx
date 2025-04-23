@@ -1,41 +1,121 @@
 import { Image, StyleSheet, TouchableOpacity } from 'react-native';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { auth, firestore } from '@/firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
 export default function IndexScreen() {
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [lockStatus, setLockStatus] = useState('locked');
+  const [userData, setUserData] = useState<{ name?: string } | null>(null);
   
-  const handleUnlock = () => {
+  useEffect(() => {
+    // Check if user is authenticated
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        // Get user data from Firestore
+        try {
+          const userDocRef = doc(firestore, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            setUserData(userDoc.data());
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+        }
+      }
+    });
+    
+    return () => unsubscribe();
+  }, []);
+  
+  const handleUnlock = async () => {
     setIsUnlocking(true);
-    // Simulate unlock process
-    setTimeout(() => {
+    
+    try {
+      // Here you would typically communicate with your lock API or Firebase
+      // For now, we're just simulating it with a timeout
+      setLockStatus('unlocking');
+      
+      // Simulate unlock process
+      setTimeout(() => {
+        setLockStatus('unlocked');
+        setTimeout(() => {
+          setLockStatus('locked');
+          setIsUnlocking(false);
+        }, 3000);
+      }, 2000);
+      
+      // Example of writing to Firestore (access log)
+      if (auth.currentUser) {
+        // You can uncomment this when ready to write to Firestore
+        /*
+        const accessRef = collection(firestore, 'accessLogs');
+        await addDoc(accessRef, {
+          userId: auth.currentUser.uid,
+          timestamp: new Date(),
+          action: 'unlock',
+          success: true
+        });
+        */
+      }
+    } catch (error) {
+      console.error('Error unlocking:', error);
       setIsUnlocking(false);
-    }, 2000);
+      setLockStatus('locked');
+    }
   };
+
+  // Helper function to determine which lock icon to show
+  const getLockIcon = () => {
+    switch(lockStatus) {
+      case 'unlocked':
+        return "lock-open";
+      case 'unlocking':
+        return "hourglass";
+      default:
+        return "lock-closed";
+    }
+  }
+
+  // Helper function to determine button color
+  const getButtonColor = () => {
+    switch(lockStatus) {
+      case 'unlocked':
+        return styles.unlockButtonSuccess;
+      case 'unlocking':
+        return styles.unlockButtonActive;
+      default:
+        return {};
+    }
+  }
 
   return (
     <ThemedView style={styles.container}>
       {/* Welcome section */}
       <ThemedView style={styles.welcomeSection}>
         <ThemedText type="title" style={styles.title}>Smart Lock</ThemedText>
-        <ThemedText style={styles.subtitle}>Welcome back!</ThemedText>
+        <ThemedText style={styles.subtitle}>
+          {userData ? `Welcome back, ${userData.name || 'User'}!` : 'Welcome back!'}
+        </ThemedText>
       </ThemedView>
 
       {/* Main unlock button */}
       <ThemedView style={styles.unlockSection}>
         <TouchableOpacity 
-          style={[styles.unlockButton, isUnlocking && styles.unlockButtonActive]} 
+          style={[styles.unlockButton, getButtonColor()]} 
           onPress={handleUnlock}
           disabled={isUnlocking}>
           <Ionicons 
-            name={isUnlocking ? "lock-open" : "lock-closed"} 
+            name={getLockIcon()} 
             size={48} 
             color="white" />
           <ThemedText style={styles.unlockButtonText}>
-            {isUnlocking ? "Opening..." : "Unlock"}
+            {lockStatus === 'unlocking' ? "Opening..." : 
+             lockStatus === 'unlocked' ? "Unlocked" : "Unlock"}
           </ThemedText>
         </TouchableOpacity>
       </ThemedView>
@@ -98,6 +178,9 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
   },
   unlockButtonActive: {
+    backgroundColor: '#4CAF50',
+  },
+  unlockButtonSuccess: {
     backgroundColor: '#4CAF50',
   },
   unlockButtonText: {
