@@ -1,32 +1,33 @@
-import { SplashScreen, Slot } from 'expo-router';
+import { Slot } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { auth } from '@/firebase/config';
-import { onAuthStateChanged } from 'firebase/auth';
+import { Redirect } from 'expo-router';
+import { ActivityIndicator, View } from 'react-native';
 
-// Prevent the splash screen from auto-hiding
-SplashScreen.preventAutoHideAsync();
-
-export default function RootLayout() {
-  const [initialized, setInitialized] = useState(false);
+export default function AppLayout() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // Set up the auth state listener
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      // Mark as initialized once we have the auth state
-      setInitialized(true);
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setIsAuthenticated(!!user);
     });
-
     return unsubscribe;
   }, []);
 
-  useEffect(() => {
-    // Hide the splash screen once we're initialized
-    if (initialized) {
-      SplashScreen.hideAsync();
-    }
-  }, [initialized]);
+  // Show loading while checking auth
+  if (isAuthenticated === null) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#3785a1" />
+      </View>
+    );
+  }
 
-  // Just render the slot regardless of auth state
-  // We'll handle redirects in the child layouts/screens
+  // If not authenticated, redirect to login
+  if (!isAuthenticated) {
+    return <Redirect href="/auth/login" />;
+  }
+
+  // User is authenticated, show content
   return <Slot />;
 }
