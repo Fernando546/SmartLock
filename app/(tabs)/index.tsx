@@ -1,8 +1,10 @@
-import { Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { auth, firestore } from '@/firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
+import { logout } from '@/firebase/auth';
+import { router } from 'expo-router';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -69,6 +71,16 @@ export default function IndexScreen() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace('/auth/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      Alert.alert('Error', 'Failed to log out. Please try again.');
+    }
+  };
+
   // Helper function to determine which lock icon to show
   const getLockIcon = () => {
     switch(lockStatus) {
@@ -132,9 +144,9 @@ export default function IndexScreen() {
           <ThemedText style={styles.actionText}>History</ThemedText>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="settings" size={24} color="#A1CEDC" />
-          <ThemedText style={styles.actionText}>Settings</ThemedText>
+        <TouchableOpacity style={styles.actionButton} onPress={handleLogout}>
+          <Ionicons name="log-out" size={24} color="#A1CEDC" />
+          <ThemedText style={styles.actionText}>Logout</ThemedText>
         </TouchableOpacity>
       </ThemedView>
     </ThemedView>
@@ -172,10 +184,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    boxShadow: '0px 2px 3.84px rgba(0, 0, 0, 0.25)',
   },
   unlockButtonActive: {
     backgroundColor: '#4CAF50',
