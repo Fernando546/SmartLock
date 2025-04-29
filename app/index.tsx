@@ -87,9 +87,9 @@ export default function IndexScreen() {
         
         <TouchableOpacity 
           style={styles.navButton}
-          onPress={() => router.push('/profile')}>
+          onPress={() => router.push('/auth/login')}>
           <Ionicons name="person-outline" size={30} color="#A1CEDC" />
-          <ThemedText style={styles.navButtonText}>Profile</ThemedText>
+          <ThemedText style={styles.navButtonText}>Login</ThemedText>
         </TouchableOpacity>
       </ThemedView>
     </ThemedView>

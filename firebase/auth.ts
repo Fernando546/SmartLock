@@ -1,4 +1,4 @@
-import { auth, firestore, googleProvider } from './config';
+import { auth, firestore } from './config';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
@@ -43,26 +43,7 @@ export const loginWithEmail = async (email: string, password: string) => {
 };
 
 // Function to login with Google
-export const loginWithGoogle = async () => {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user;
-    
-    // Check if user exists in Firestore, if not create a document
-    const userDoc = await getDoc(doc(firestore, 'users', user.uid));
-    if (!userDoc.exists()) {
-      await setDoc(doc(firestore, 'users', user.uid), {
-        name: user.displayName,
-        email: user.email,
-        createdAt: new Date(),
-      });
-    }
-    
-    return user;
-  } catch (error) {
-    throw error;
-  }
-};
+
 
 // Function to logout
 export const logout = async () => {
