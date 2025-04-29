@@ -27,7 +27,7 @@ export default function AuthLayout() {
 
   // If user is already authenticated, redirect to the main app
   if (user) {
-    return <Redirect href="/(tabs)" />;
+    return <Redirect href="/" />;
   }
 
   // User is not authenticated, show login/register screens

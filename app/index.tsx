@@ -2,6 +2,8 @@ import { StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { auth } from '@/firebase/config';
+import { onAuthStateChanged } from 'firebase/auth';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -9,13 +11,26 @@ import { ThemedView } from '@/components/ThemedView';
 export default function IndexScreen() {
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [lockStatus, setLockStatus] = useState('locked');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   
-  const handleUnlock = async () => {
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsLoggedIn(!!user);
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  const handleUnlock = async (method: 'remote' | 'nfc') => {
+    // Don't allow remote unlock if not logged in
+    if (method === 'remote' && !isLoggedIn) {
+      return;
+    }
+
     setIsUnlocking(true);
     
     try {
-      // Here you would typically communicate with your lock API or Firebase
-      // For now, we're just simulating it with a timeout
+      // Here you would communicate with your lock API or Firebase
       setLockStatus('unlocking');
       
       // Simulate unlock process
@@ -59,37 +74,74 @@ export default function IndexScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      {/* Main unlock button section */}
+      {/* Main unlock buttons section */}
       <ThemedView style={styles.unlockSection}>
-        <TouchableOpacity 
-          style={[styles.unlockButton, getButtonColor()]} 
-          onPress={handleUnlock}
-          disabled={isUnlocking}>
+        <ThemedText style={styles.titleText}>Safe Unlock</ThemedText>
+        
+        <ThemedView style={styles.buttonsContainer}>
+          {/* Remote unlock button */}
+          <TouchableOpacity 
+            style={[
+              styles.unlockButton, 
+              getButtonColor(),
+              !isLoggedIn && styles.disabledButton
+            ]} 
+            onPress={() => handleUnlock('remote')}
+            disabled={isUnlocking || !isLoggedIn}>
+            <Ionicons 
+              name="wifi" 
+              size={40} 
+              color={isLoggedIn ? "white" : "#888888"} />
+            <ThemedText style={[styles.unlockButtonText, !isLoggedIn && styles.disabledText]}>
+              {!isLoggedIn ? "Login Required" : 
+                lockStatus === 'unlocking' ? "Opening..." : 
+                lockStatus === 'unlocked' ? "Unlocked" : "Remote Unlock"}
+            </ThemedText>
+          </TouchableOpacity>
+
+          {/* NFC unlock button */}
+          <TouchableOpacity 
+            style={[styles.unlockButton, getButtonColor()]} 
+            onPress={() => handleUnlock('nfc')}
+            disabled={isUnlocking}>
+            <Ionicons 
+              name="radio-outline" 
+              size={40} 
+              color="white" />
+            <ThemedText style={styles.unlockButtonText}>
+              {lockStatus === 'unlocking' ? "Opening..." : 
+                lockStatus === 'unlocked' ? "Unlocked" : "NFC Unlock"}
+            </ThemedText>
+          </TouchableOpacity>
+        </ThemedView>
+
+        {/* Lock status indicator */}
+        <ThemedView style={styles.statusContainer}>
           <Ionicons 
             name={getLockIcon()} 
-            size={64} 
-            color="white" />
-          <ThemedText style={styles.unlockButtonText}>
-            {lockStatus === 'unlocking' ? "Opening..." : 
-             lockStatus === 'unlocked' ? "Unlocked" : "Unlock"}
+            size={44} 
+            color={lockStatus === 'unlocked' ? "#4CAF50" : "#A1CEDC"} />
+          <ThemedText style={styles.statusText}>
+            {lockStatus === 'unlocking' ? "Opening safe..." : 
+             lockStatus === 'unlocked' ? "Safe unlocked" : "Safe locked"}
           </ThemedText>
-        </TouchableOpacity>
+        </ThemedView>
       </ThemedView>
 
       {/* Navigation buttons */}
       <ThemedView style={styles.navigationButtons}>
         <TouchableOpacity 
           style={styles.navButton}
-          onPress={() => router.push('/settings')}>
-          <Ionicons name="settings-outline" size={30} color="#A1CEDC" />
-          <ThemedText style={styles.navButtonText}>Settings</ThemedText>
+          onPress={() => router.push('/history')}>
+          <Ionicons name="time-outline" size={30} color="#A1CEDC" />
+          <ThemedText style={styles.navButtonText}>History</ThemedText>
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={styles.navButton}
           onPress={() => router.push('/auth/login')}>
-          <Ionicons name="person-outline" size={30} color="#A1CEDC" />
-          <ThemedText style={styles.navButtonText}>Login</ThemedText>
+          <Ionicons name={isLoggedIn ? "log-out-outline" : "person-outline"} size={30} color="#A1CEDC" />
+          <ThemedText style={styles.navButtonText}>{isLoggedIn ? "Logout" : "Login"}</ThemedText>
         </TouchableOpacity>
       </ThemedView>
     </ThemedView>
@@ -106,15 +158,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flex: 1,
   },
+  titleText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 30,
+  },
+  buttonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginBottom: 30,
+  },
   unlockButton: {
     backgroundColor: '#1D3D47',
-    borderRadius: 100,
-    height: 200,
-    width: 200,
+    borderRadius: 20,
+    height: 160,
+    width: '45%',
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 5,
-    boxShadow: '0px 2px 3.84px rgba(0, 0, 0, 0.25)',
+    padding: 15,
   },
   unlockButtonActive: {
     backgroundColor: '#4CAF50',
@@ -122,11 +185,31 @@ const styles = StyleSheet.create({
   unlockButtonSuccess: {
     backgroundColor: '#4CAF50',
   },
+  disabledButton: {
+    backgroundColor: '#37474F',
+    opacity: 0.7,
+  },
   unlockButtonText: {
     color: 'white',
-    marginTop: 8,
-    fontSize: 20,
+    marginTop: 12,
+    fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  disabledText: {
+    color: '#BBBBBB',
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    backgroundColor: '#1D3D47',
+    padding: 15,
+    borderRadius: 15,
+  },
+  statusText: {
+    marginLeft: 10,
+    fontSize: 18,
   },
   navigationButtons: {
     flexDirection: 'row',
