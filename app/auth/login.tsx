@@ -1,79 +1,107 @@
 import React, { useState } from 'react';
-import { StyleSheet, TouchableOpacity, View, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { loginWithEmail, registerWithEmail } from '@/firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/firebase/config';
+
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { router } from 'expo-router';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleEmailAuth = async () => {
+  const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
-      return;
-    }
-
-    if (!name) {
-      Alert.alert('Error', 'Please enter your name');
+      Alert.alert('Error', 'Please enter email and password');
       return;
     }
 
     setIsLoading(true);
-  
+
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // Reset fields after successful login
+      setEmail('');
+      setPassword('');
+      // Navigate back to main screen
+      router.replace('/');
+    } catch (error: any) {
+      // Show error message
+      Alert.alert('Login Failed', 'Invalid email or password. Only admin can login.');
+      console.error('Login error:', error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedView style={styles.headerSection}>
-        <ThemedText type="title" style={styles.title}>Smart Lock</ThemedText>
-        <ThemedText style={styles.subtitle}>
-          
-        </ThemedText>
+      <ThemedView style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#A1CEDC" />
+        </TouchableOpacity>
+        <ThemedText style={styles.headerTitle}>Admin Login</ThemedText>
       </ThemedView>
 
-      <ThemedView style={styles.formSection}>
-   
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#A1CEDC"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#A1CEDC"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+      <ThemedView style={styles.formContainer}>
+        <Ionicons name="lock-closed" size={60} color="#A1CEDC" style={styles.lockIcon} />
+        <ThemedText style={styles.subtitle}>Login to access admin features</ThemedText>
+
+        <ThemedView style={styles.inputContainer}>
+          <Ionicons name="mail" size={24} color="#A1CEDC" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Admin Email"
+            placeholderTextColor="#607D8B"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+        </ThemedView>
+
+        <ThemedView style={styles.inputContainer}>
+          <Ionicons name="key" size={24} color="#A1CEDC" style={styles.inputIcon} />
+          <TextInput
+            style={styles.input}
+            placeholder="Password"
+            placeholderTextColor="#607D8B"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <Ionicons 
+              name={showPassword ? "eye-off" : "eye"} 
+              size={24} 
+              color="#607D8B" 
+            />
+          </TouchableOpacity>
+        </ThemedView>
 
         <TouchableOpacity 
-          style={styles.authButton} 
-          onPress={handleEmailAuth}
+          style={styles.loginButton}
+          onPress={handleLogin}
           disabled={isLoading}>
           {isLoading ? (
             <ActivityIndicator color="white" />
           ) : (
-            <ThemedText style={styles.authButtonText}>
-              Login
-            </ThemedText>
+            <>
+              <Ionicons name="log-in" size={24} color="white" />
+              <ThemedText style={styles.loginText}>Login</ThemedText>
+            </>
           )}
         </TouchableOpacity>
 
+        <ThemedText style={styles.adminNote}>
+          Note: Only admin users can login to this portal
+        </ThemedText>
       </ThemedView>
     </ThemedView>
   );
@@ -84,62 +112,69 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
-  headerSection: {
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 60,
     marginBottom: 40,
+    paddingVertical: 15,
   },
-  title: {
-    marginBottom: 8,
-    textAlign: 'center',
+  backButton: {
+    marginRight: 15,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+  },
+  formContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  lockIcon: {
+    marginBottom: 20,
   },
   subtitle: {
-    opacity: 0.7,
+    fontSize: 18,
+    marginBottom: 30,
     textAlign: 'center',
   },
-  formSection: {
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 20,
-  },
-  input: {
-    backgroundColor: '#1D3D47',
-    borderRadius: 8,
-    padding: 15,
-    marginBottom: 16,
-    width: '100%',
-    color: 'white',
-  },
-  authButton: {
-    backgroundColor: '#3785a1',
-    borderRadius: 8,
-    padding: 15,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  googleButton: {
-    backgroundColor: '#DB4437',
-    borderRadius: 8,
-    padding: 15,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 16,
+  inputContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    backgroundColor: '#1D3D47',
+    borderRadius: 10,
+    marginBottom: 15,
+    paddingHorizontal: 15,
+    height: 60,
   },
-  googleIcon: {
+  inputIcon: {
     marginRight: 10,
   },
-  authButtonText: {
+  input: {
+    flex: 1,
+    height: 60,
     color: 'white',
-    fontWeight: 'bold',
     fontSize: 16,
   },
-  switchModeButton: {
-    marginTop: 10,
+  loginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3785a1',
+    borderRadius: 10,
+    width: '100%',
+    height: 60,
+    marginTop: 20,
   },
-  switchModeText: {
-    color: '#A1CEDC',
+  loginText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  adminNote: {
+    marginTop: 30,
+    opacity: 0.7,
+    textAlign: 'center',
   },
 });

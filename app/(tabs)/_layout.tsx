@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { auth } from '@/firebase/config';
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export default function TabsLayout() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      // User will either be null (not logged in) or the admin user
       setIsAuthenticated(!!user);
     });
     return unsubscribe;
@@ -29,7 +31,7 @@ export default function TabsLayout() {
     return <Redirect href="/auth/login" />;
   }
 
-  // User is authenticated, show tabs
+  // User is authenticated as admin, show tabs
   return (
     <Tabs
       screenOptions={{
