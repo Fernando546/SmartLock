@@ -2,8 +2,9 @@ import { StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-na
 import { useState, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { auth } from '@/firebase/config';
+import { auth, database } from '@/firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { ref, set } from 'firebase/database';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -30,7 +31,6 @@ export default function IndexScreen() {
       Alert.alert('Error', 'Failed to log out');
     }
   };
-
   const handleUnlock = async (method: 'remote' | 'nfc') => {
     // Don't allow remote unlock if not logged in
     if (method === 'remote' && !isLoggedIn) {
@@ -39,19 +39,66 @@ export default function IndexScreen() {
     }
 
     setIsUnlocking(true);
+    setLockStatus('unlocking');
     
-    try {
-      // Here you would communicate with your lock API or Firebase
-      setLockStatus('unlocking');
-      
-      // Simulate unlock process
+    if (method === 'nfc') {
+      try {
+        console.log('Updating Firebase: setting open to 1...');
+        console.log('Database reference:', database ? 'Available' : 'Not available');
+        
+        try {
+          await set(ref(database, 'lockers/A085E3E76DA0/open'), "1");
+          console.log('Firebase database updated: open = 1');
+          Alert.alert('Debug', 'Firebase value updated to 1', [{ text: 'OK' }]);
+          
+          setTimeout(() => {
+            setLockStatus('unlocked');
+            console.log('Lock status set to unlocked');
+            
+            const unlockEvent = {
+              method: method,
+              user: 'NFC User',
+              timestamp: new Date().toISOString(),
+            };
+            console.log('Unlock event:', unlockEvent);
+            
+            // After 3 seconds, reset lock state
+            setTimeout(() => {
+              set(ref(database, 'lockers/A085E3E76DA0/open'), "0")
+                .then(() => {
+                  console.log('Firebase database reset: open = 0');
+                  setLockStatus('locked');
+                  setIsUnlocking(false);
+                })
+                .catch(error => {
+                  console.error('Error resetting lock in Firebase:', error);
+                  setLockStatus('locked');
+                  setIsUnlocking(false);
+                  Alert.alert('Error', 'Failed to reset lock status in database');
+                });
+            }, 3000);
+          }, 2000);
+        } catch (writeError) {
+          console.error('Firebase write error:', writeError);
+          Alert.alert('Database Write Error', 'Could not write to Firebase. Check your connection and permissions.');
+          setIsUnlocking(false);
+          setLockStatus('locked');
+        }
+      } catch (error) {
+        console.error('Firebase setup error:', error);
+        Alert.alert('Database Error', 'Failed to setup database connection');
+        setIsUnlocking(false);
+        setLockStatus('locked');
+      }
+    } else {
+      // Handle remote unlock (not using Firebase)
       setTimeout(() => {
         setLockStatus('unlocked');
         
-        // Add unlock event to history (this would be Firebase in a real app)
+        // Add unlock event to history
         const unlockEvent = {
-          method,
-          user: method === 'remote' ? (auth.currentUser?.email || 'admin') : 'NFC User',
+          method: method,
+          user: auth.currentUser?.email || 'admin',
           timestamp: new Date().toISOString(),
         };
         console.log('Unlock event:', unlockEvent);
@@ -61,10 +108,6 @@ export default function IndexScreen() {
           setIsUnlocking(false);
         }, 3000);
       }, 2000);
-    } catch (error) {
-      console.error('Error unlocking:', error);
-      setIsUnlocking(false);
-      setLockStatus('locked');
     }
   };
 
