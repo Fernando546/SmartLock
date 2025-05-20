@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { auth, database } from '@/firebase/config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { ref, set } from 'firebase/database';
+import { ref, set, push } from 'firebase/database';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -31,6 +31,33 @@ export default function IndexScreen() {
       Alert.alert('Error', 'Failed to log out');
     }
   };
+  const saveUnlockEvent = async (method: 'remote' | 'nfc') => {
+    try {
+      // Create a new unique ID for this unlock event
+      const newEventRef = push(ref(database, 'openings'));
+      
+      // Save the unlock event data
+      const unlockEvent = {
+        method: method,
+        user: method === 'remote' ? (auth.currentUser?.email || 'admin') : 'NFC User',
+        timestamp: new Date().toISOString(),
+      };
+      
+      await set(newEventRef, unlockEvent);
+      console.log('Unlock event saved to database:', unlockEvent);
+      
+      // Update the locker lastOpen information
+      await set(ref(database, 'lockers/A085E3E76DA0/lastOpen'), {
+        method: method,
+        user: method === 'remote' ? (auth.currentUser?.email || 'admin') : 'NFC User',
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error('Error saving unlock event:', error);
+      Alert.alert('Error', 'Failed to save unlock event to database');
+    }
+  };
+
   const handleUnlock = async (method: 'remote' | 'nfc') => {
     // Don't allow remote unlock if not logged in
     if (method === 'remote' && !isLoggedIn) {
@@ -43,27 +70,25 @@ export default function IndexScreen() {
     
     if (method === 'nfc') {
       try {
+        // Make sure we have the correct path
         console.log('Updating Firebase: setting open to 1...');
         console.log('Database reference:', database ? 'Available' : 'Not available');
         
         try {
           await set(ref(database, 'lockers/A085E3E76DA0/open'), "1");
           console.log('Firebase database updated: open = 1');
-          Alert.alert('Debug', 'Firebase value updated to 1', [{ text: 'OK' }]);
           
+          // Simulate unlock process
           setTimeout(() => {
             setLockStatus('unlocked');
             console.log('Lock status set to unlocked');
             
-            const unlockEvent = {
-              method: method,
-              user: 'NFC User',
-              timestamp: new Date().toISOString(),
-            };
-            console.log('Unlock event:', unlockEvent);
+            // Save unlock event to database
+            saveUnlockEvent(method);
             
             // After 3 seconds, reset lock state
             setTimeout(() => {
+              // Reset the Firebase value back to "0"
               set(ref(database, 'lockers/A085E3E76DA0/open'), "0")
                 .then(() => {
                   console.log('Firebase database reset: open = 0');
@@ -74,7 +99,6 @@ export default function IndexScreen() {
                   console.error('Error resetting lock in Firebase:', error);
                   setLockStatus('locked');
                   setIsUnlocking(false);
-                  Alert.alert('Error', 'Failed to reset lock status in database');
                 });
             }, 3000);
           }, 2000);
@@ -91,23 +115,46 @@ export default function IndexScreen() {
         setLockStatus('locked');
       }
     } else {
-      // Handle remote unlock (not using Firebase)
-      setTimeout(() => {
-        setLockStatus('unlocked');
+      // Handle remote unlock
+      try {
+        console.log('Remote unlock: setting open to 1...');
         
-        // Add unlock event to history
-        const unlockEvent = {
-          method: method,
-          user: auth.currentUser?.email || 'admin',
-          timestamp: new Date().toISOString(),
-        };
-        console.log('Unlock event:', unlockEvent);
-        
-        setTimeout(() => {
-          setLockStatus('locked');
+        try {
+          await set(ref(database, 'lockers/A085E3E76DA0/open'), "1");
+          console.log('Firebase database updated: open = 1');
+          
+          setTimeout(() => {
+            setLockStatus('unlocked');
+            
+            // Save unlock event to database
+            saveUnlockEvent(method);
+            
+            setTimeout(() => {
+              set(ref(database, 'lockers/A085E3E76DA0/open'), "0")
+                .then(() => {
+                  console.log('Firebase database reset: open = 0');
+                  setLockStatus('locked');
+                  setIsUnlocking(false);
+                })
+                .catch(error => {
+                  console.error('Error resetting lock in Firebase:', error);
+                  setLockStatus('locked');
+                  setIsUnlocking(false);
+                });
+            }, 3000);
+          }, 2000);
+        } catch (writeError) {
+          console.error('Firebase write error:', writeError);
+          Alert.alert('Database Write Error', 'Could not write to Firebase. Check your connection and permissions.');
           setIsUnlocking(false);
-        }, 3000);
-      }, 2000);
+          setLockStatus('locked');
+        }
+      } catch (error) {
+        console.error('Firebase setup error:', error);
+        Alert.alert('Database Error', 'Failed to setup database connection');
+        setIsUnlocking(false);
+        setLockStatus('locked');
+      }
     }
   };
 

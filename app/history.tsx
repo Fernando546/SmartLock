@@ -1,21 +1,21 @@
-import { StyleSheet, FlatList } from 'react-native';
+import { StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import { useEffect, useState } from 'react';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { TouchableOpacity } from 'react-native';
+import { database } from '@/firebase/config';
+import { ref, onValue, query, orderByChild } from 'firebase/database';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
-// Mock data for history entries
-// In a real app, you would fetch this from Firebase or your backend
-const mockHistoryData = [
-  { id: '1', method: 'remote', user: 'admin', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
-  { id: '2', method: 'nfc', user: 'admin', timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
-  { id: '3', method: 'remote', user: 'admin', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString() },
-  { id: '4', method: 'nfc', user: 'admin', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-  { id: '5', method: 'remote', user: 'admin', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 25).toISOString() },
-];
+// Type for our history data
+interface HistoryItem {
+  id: string;
+  method: 'remote' | 'nfc';
+  user: string;
+  timestamp: string;
+}
 
 // Format date for display
 const formatDate = (dateString: string) => {
@@ -37,11 +37,43 @@ const formatDate = (dateString: string) => {
 
 export default function HistoryScreen() {
   const [historyData, setHistoryData] = useState<{ id: string; method: string; user: string; timestamp: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // In a real app, you would fetch data from Firebase
-    // For now, we'll use the mock data
-    setHistoryData(mockHistoryData);
+    // Fetch history data from Firebase
+    const openingsRef = ref(database, 'openings');
+    
+    // Listen for changes in the openings data
+    const unsubscribe = onValue(openingsRef, (snapshot) => {
+      setIsLoading(true);
+      const data = snapshot.val();
+      
+      if (data) {
+        // Convert Firebase object to array
+        const historyArray = Object.keys(data).map(key => ({
+          id: key,
+          method: data[key].method,
+          user: 'admin',
+          timestamp: data[key].timestamp
+        }));
+        
+        // Sort by timestamp (newest first)
+        historyArray.sort((a, b) => 
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+        
+        setHistoryData(historyArray);
+      } else {
+        setHistoryData([]);
+      }
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching history data:", error);
+      setIsLoading(false);
+    });
+    
+    // Cleanup listener on unmount
+    return () => unsubscribe();
   }, []);
 
   const renderHistoryItem = ({ item }: { item: { id: string; method: string; user: string; timestamp: string } }) => (
@@ -62,7 +94,6 @@ export default function HistoryScreen() {
       </ThemedView>
     </ThemedView>
   );
-
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.header}>
@@ -74,7 +105,12 @@ export default function HistoryScreen() {
         <ThemedText style={styles.headerTitle}>Unlock History</ThemedText>
       </ThemedView>
 
-      {historyData.length > 0 ? (
+      {isLoading ? (
+        <ThemedView style={styles.emptyState}>
+          <ActivityIndicator size="large" color="#3785a1" />
+          <ThemedText style={styles.emptyText}>Loading history...</ThemedText>
+        </ThemedView>
+      ) : historyData.length > 0 ? (
         <FlatList
           data={historyData}
           renderItem={renderHistoryItem}
