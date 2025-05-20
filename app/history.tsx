@@ -10,11 +10,11 @@ import { ThemedView } from '@/components/ThemedView';
 // Mock data for history entries
 // In a real app, you would fetch this from Firebase or your backend
 const mockHistoryData = [
-  { id: '1', method: 'remote', user: 'dupagowno@example.com', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
-  { id: '2', method: 'nfc', user: 'dupagowno', timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
-  { id: '3', method: 'remote', user: 'dupagowno', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString() },
-  { id: '4', method: 'nfc', user: 'dupagowno', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-  { id: '5', method: 'remote', user: 'dupagowno', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 25).toISOString() },
+  { id: '1', method: 'remote', user: 'admin', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
+  { id: '2', method: 'nfc', user: 'admin', timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
+  { id: '3', method: 'remote', user: 'admin', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString() },
+  { id: '4', method: 'nfc', user: 'admin', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
+  { id: '5', method: 'remote', user: 'admin', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 25).toISOString() },
 ];
 
 // Format date for display
@@ -131,6 +131,7 @@ const styles = StyleSheet.create({
   historyDetails: {
     flex: 1,
     justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
   methodText: {
     fontSize: 18,
